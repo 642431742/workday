@@ -497,8 +497,67 @@
         document.getElementById(
           "workDaysResult"
         ).textContent = `本月共需要上班 ${workDays} 天，本月还需上班 ${
-          workDays - Math.min(currentDay - 1, daysInMonth)
+          workDays -
+          calculateWorkedDays(
+            year,
+            month,
+            workMode,
+            restDay,
+            holidays,
+            workingWeekends
+          )
         } 天`;
+      }
+
+      // 计算已经上班的天数
+      function calculateWorkedDays(
+        year,
+        month,
+        workMode,
+        restDay,
+        holidays,
+        workingWeekends
+      ) {
+        const today = new Date();
+        // 如果不是当前月份，返回0（未来月份）或总工作日数（过去月份）
+        if (year !== today.getFullYear() || month !== today.getMonth() + 1) {
+          return year < today.getFullYear() ||
+            (year === today.getFullYear() && month < today.getMonth() + 1)
+            ? workDays
+            : 0;
+        }
+
+        let workedDays = 0;
+        // 遍历从1号到今天
+        for (let day = 1; day <= today.getDate(); day++) {
+          const date = `${year}-${String(month).padStart(2, "0")}-${String(
+            day
+          ).padStart(2, "0")}`;
+          const dayOfWeek = new Date(date).getDay();
+          // 调整为周一到周日的顺序（0-6）
+          const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+
+          const isHoliday = holidays[date];
+          const isWorkingWeekend = workingWeekends[date];
+
+          // 判断是否为工作日
+          let isWorkDay = false;
+          if (workMode === "none") {
+            isWorkDay = true;
+          } else if (workMode === "single") {
+            isWorkDay = adjustedDayOfWeek !== restDay || isWorkingWeekend;
+          } else {
+            // double
+            const isWeekend =
+              adjustedDayOfWeek === 4 || adjustedDayOfWeek === 5;
+            isWorkDay = (!isWeekend && !isHoliday) || isWorkingWeekend;
+          }
+
+          if (isWorkDay && !isHoliday) {
+            workedDays++;
+          }
+        }
+        return workedDays;
       }
 
       // 初始化
