@@ -496,7 +496,9 @@
 
         document.getElementById(
           "workDaysResult"
-        ).textContent = `本月需要上班 ${workDays} 天`;
+        ).textContent = `本月共需要上班 ${workDays} 天，本月还需上班 ${
+          workDays - Math.min(currentDay - 1, daysInMonth)
+        } 天`;
       }
 
       // 初始化
