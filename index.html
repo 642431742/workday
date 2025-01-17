@@ -216,10 +216,54 @@
           font-size: 16px;
         }
       }
+
+      /* Loading遮罩样式 */
+      .loading-mask {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #40a9ff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .loading-text {
+        color: #666;
+        font-size: 16px;
+      }
     </style>
   </head>
   <body>
     <div class="container">
+      <!-- Loading遮罩 -->
+      <div id="loadingMask" class="loading-mask" style="display: none">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在请求日历数据，请稍等...</div>
+      </div>
       <div class="header">
         <h1>工作日历</h1>
       </div>
@@ -275,21 +319,20 @@
     <script>
       // 动态获取节假日数据
       async function getHolidays(year) {
+        // 显示loading遮罩
+        document.getElementById("loadingMask").style.display = "flex";
         try {
           const response = await fetch(
             `https://raw.githubusercontent.com/NateScarlet/holiday-cn/master/${year}.json`
           );
           const data = await response.json();
-          console.log("原始数据:", data); // 调试日志
+          console.log("原始数据:", data);
           const holidays = {};
           const workingWeekends = {};
-          // 处理数组格式的数据
           data.days.forEach((info) => {
-            // 如果是休息日且是节假日，添加到holidays
             if (info.isOffDay) {
               holidays[info.date] = info.name || "节假日";
             }
-            // 如果是工作日且是周末，添加到workingWeekends
             if (
               !info.isOffDay &&
               (new Date(info.date).getDay() === 0 ||
@@ -298,12 +341,15 @@
               workingWeekends[info.date] = true;
             }
           });
-          console.log("处理后的节假日:", holidays); // 调试日志
-          console.log("处理后的调休日:", workingWeekends); // 调试日志
+          console.log("处理后的节假日:", holidays);
+          console.log("处理后的调休日:", workingWeekends);
           return { holidays, workingWeekends };
         } catch (error) {
           console.error(`获取${year}年节假日数据失败:`, error);
           return { holidays: {}, workingWeekends: {} };
+        } finally {
+          // 隐藏loading遮罩
+          document.getElementById("loadingMask").style.display = "none";
         }
       }
 
@@ -450,11 +496,23 @@
 
               if (isWorkDay && !isHoliday) workDays++;
 
+              // 判断是否是今天
+              const today = new Date();
+              const isToday =
+                year === today.getFullYear() &&
+                month === today.getMonth() + 1 &&
+                currentDay === today.getDate();
+
               html += `<td class="${classes.join(" ")}">
                 <div>${currentDay}</div>
                 ${
                   isHoliday
                     ? `<div style="font-size: 12px; color: #f5222d;">${isHoliday}</div>`
+                    : ""
+                }
+                ${
+                  isToday
+                    ? `<div style="font-size: 12px; color: #52c41a;">今天</div>`
                     : ""
                 }
               </td>`;
@@ -568,6 +626,11 @@
       // 添加事件监听器
       const workModeSelect = document.getElementById("workMode");
       const restDaySelect = document.getElementById("restDay");
+
+      // 添加年份变更监听器
+      document
+        .getElementById("year")
+        .addEventListener("change", generateCalendar);
 
       workModeSelect.addEventListener("change", () => {
         if (workModeSelect.value === "single") {
